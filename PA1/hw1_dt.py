@@ -7,15 +7,30 @@ class DecisionTree():
         self.clf_name = "DecisionTree"
         self.root_node = None
 
-    # TODO: train Decision Tree
     def train(self, features, labels):
         # features: List[List[float]], labels: List[int]
         # init
+        assert (len(features) > 0)
+        self.feature_dim = len(features[0])
+        num_cls = np.unique(labels).size
 
-    # TODO: predic function
+        # build the tree
+        self.root_node = TreeNode(features, labels, num_cls)
+        if self.root_node.splittable:
+            self.root_node.split()
+
+        return
+
     def predict(self, features):
         # features: List[List[any]]
         # return List[int]
+        y_pred = []
+        for idx, feature in enumerate(features):
+            pred = self.root_node.predict(feature)
+            y_pred.append(pred)
+            # print ("feature: ", feature)
+            # print ("pred: ", pred)
+        return y_pred
 
 
 class TreeNode(object):
@@ -31,7 +46,7 @@ class TreeNode(object):
             if self.labels.count(label) > count_max:
                 count_max = labels.count(label)
                 self.cls_max = label
-        # splitable is false when all features belongs to one class
+                # splitable is false when all features belongs to one class
         if len(np.unique(labels)) < 2:
             self.splittable = False
         else:
@@ -41,8 +56,12 @@ class TreeNode(object):
 
         self.feature_uniq_split = None  # the possible unique values of the feature to be split
 
-    # TODO: implement split function
+    #TODO: try to split current node
     def split(self):
+        raise NotImplementedError
 
-    # TODO:treeNode predict function
+    # TODO: predict the branch or the class
     def predict(self, feature):
+        # feature: List[any]
+        # return: int
+        raise NotImplementedError
