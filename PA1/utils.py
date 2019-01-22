@@ -60,6 +60,7 @@ def euclidean_distance(point1: List[float], point2: List[float]) -> float:
 def inner_product_distance(point1: List[float], point2: List[float]) -> float:
     return float(np.dot(point1, point2))
 
+
 # TODO:
 def gaussian_kernel_distance(point1: List[float], point2: List[float]) -> float:
     diff = np.array(point1) - np.array(point2)
@@ -70,7 +71,7 @@ def gaussian_kernel_distance(point1: List[float], point2: List[float]) -> float:
 def cosine_sim_distance(point1: List[float], point2: List[float]) -> float:
     numerator = np.dot(point1, point2)
     denominator = np.linalg.norm(point1) * np.linalg.norm(point2)
-    return float(numerator / denominator)
+    return float(1 - numerator / denominator)
 
 
 # TODO: select an instance of KNN with the best f1 score on validation dataset
@@ -83,9 +84,35 @@ def model_selection_without_normalization(distance_funcs, Xtrain, ytrain, Xval, 
     # return best_model: an instance of KNN
     # return best_k: best k choosed for best_model
     # return best_func: best function choosed for best_model
-    raise NotImplementedError
+    f1_dict = dict()
+    k_dict = dict()
+    train_cnt = len(ytrain)
+    for dist in distance_funcs:
+        f1_dict[dist] = 0.0
+        k_dict[dist] = 0
 
+    for dist in distance_funcs:
+        func = distance_funcs[dist]
+        for k in range(1, train_cnt + 1):
+            model = KNN(k, func)
+            model.train(Xtrain, ytrain)
+            yval_ = model.predict(Xval)
+            f1 = f1_score(yval, yval_)
+            if f1 > f1_dict[dist]:
+                f1_dict[dist] = f1
+                k_dict[dist] = k
+    dists = ['euclidean', 'gaussian', 'inner_prod', 'cosine_dist']
+    best_idx = 0
+    for i in range(1, 4):
+        if f1_dict[dists[i]] > f1_dict[dists[best_idx]]:
+            best_idx = i
+    best_func = dists[best_idx]
+    best_k = k_dict[best_func]
+    best_model = KNN(best_k, distance_funcs[best_func])
 
+    return best_model, best_k, best_func
+
+    
 # TODO: select an instance of KNN with the best f1 score on validation dataset, with normalized data
 def model_selection_with_transformation(distance_funcs, scaling_classes, Xtrain, ytrain, Xval, yval):
     # distance_funcs: dictionary of distance funtion
