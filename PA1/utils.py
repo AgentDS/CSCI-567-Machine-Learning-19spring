@@ -8,7 +8,23 @@ def Information_Gain(S, branches):
     # S: float
     # branches: List[List[int]] num_branches * num_cls
     # return: float
-    raise NotImplementedError
+    num_cases = np.sum(branches)
+    num_cls = len(branches[0])
+    num_branches = len(branches)
+    p = [0 for i in range(num_branches)]
+    sub_entropy = [0 for i in range(num_branches)]
+    for i in range(num_branches):
+        num_cases_branch = np.sum(branches[i])
+        p[i] = num_cases_branch / num_cases
+        for j in range(num_cls):
+            if branches[i][j] > 0:
+                p_j = branches[i][j] / num_cases_branch
+                sub_entropy[i] -= p_j * np.log2(p_j)
+    tmp = 0
+    for i in range(num_branches):
+        tmp += sub_entropy[i] * p[i]
+    Gain = S - tmp
+    return float(Gain)
 
 
 # TODO: implement reduced error prunning function, pruning your tree on this function
@@ -84,35 +100,36 @@ def model_selection_without_normalization(distance_funcs, Xtrain, ytrain, Xval, 
     # return best_model: an instance of KNN
     # return best_k: best k choosed for best_model
     # return best_func: best function choosed for best_model
-    f1_dict = dict()
-    k_dict = dict()
-    train_cnt = len(ytrain)
-    for dist in distance_funcs:
-        f1_dict[dist] = 0.0
-        k_dict[dist] = 0
 
-    for dist in distance_funcs:
-        func = distance_funcs[dist]
-        for k in range(1, train_cnt + 1):
+    dist_names = ['euclidean', 'gaussian', 'inner_prod', 'cosine_dist']
+    best_f1_iter_k = []
+    best_dist_iter_k = []
+    if len(ytrain) < 30:
+        max_k = len(ytrain)
+    else:
+        max_k = 30
+    for k in range(1, max_k, 2):
+        f1_tmp = [0, 0, 0, 0]
+        i = 0
+        for dist in dist_names:
+            func = distance_funcs[dist]
             model = KNN(k, func)
             model.train(Xtrain, ytrain)
             yval_ = model.predict(Xval)
-            f1 = f1_score(yval, yval_)
-            if f1 > f1_dict[dist]:
-                f1_dict[dist] = f1
-                k_dict[dist] = k
-    dists = ['euclidean', 'gaussian', 'inner_prod', 'cosine_dist']
-    best_idx = 0
-    for i in range(1, 4):
-        if f1_dict[dists[i]] > f1_dict[dists[best_idx]]:
-            best_idx = i
-    best_func = dists[best_idx]
-    best_k = k_dict[best_func]
+            f1_tmp[i] = f1_score(yval, yval_)
+            i = i + 1
+        best_idx = np.argmax(f1_tmp)
+        best_dist_iter_k.append(dist_names[best_idx])
+        best_f1_iter_k.append(np.max(f1_tmp))
+    best_idx = np.argmax(best_f1_iter_k)
+    best_k = list(range(1, 30, 2))[best_idx]
+    best_func = best_dist_iter_k[best_idx]
     best_model = KNN(best_k, distance_funcs[best_func])
+    best_model.train(Xtrain, ytrain)
 
     return best_model, best_k, best_func
 
-    
+
 # TODO: select an instance of KNN with the best f1 score on validation dataset, with normalized data
 def model_selection_with_transformation(distance_funcs, scaling_classes, Xtrain, ytrain, Xval, yval):
     # distance_funcs: dictionary of distance funtion
@@ -125,7 +142,65 @@ def model_selection_with_transformation(distance_funcs, scaling_classes, Xtrain,
     # return best_k: best k choosed for best_model
     # return best_func: best function choosed for best_model
     # return best_scaler: best function choosed for best_model
-    raise NotImplementedError
+
+    dist_names = ['euclidean', 'gaussian', 'inner_prod', 'cosine_dist']
+
+    best_f1_iter_k = []
+    best_dist_iter_k = []
+    best_scale_iter_k = []
+
+    norm_scaler = scaling_classes['normalize']()
+    norm_Xtrain = norm_scaler(Xtrain)
+    norm_Xval = norm_scaler(Xval)
+
+    mm_scalar = scaling_classes['min_max_scale']()
+    mm_Xtrain = mm_scalar(Xtrain)
+    mm_Xval = mm_scalar(Xval)
+
+    if len(ytrain) < 30:
+        max_k = len(ytrain)
+    else:
+        max_k = 30
+    for k in range(1, max_k, 2):
+        f1_tmp = [0, 0, 0, 0]
+        scaler_tmp = [None, None, None, None]
+        i = 0
+        for dist in dist_names:
+            func = distance_funcs[dist]
+
+            norm_model = KNN(k, func)
+            norm_model.train(norm_Xtrain, ytrain)
+            norm_yval_ = norm_model.predict(norm_Xval)
+            norm_f1 = f1_score(yval, norm_yval_)
+
+            mm_model = KNN(k, func)
+            mm_model.train(mm_Xtrain, ytrain)
+            mm_yval_ = mm_model.predict(mm_Xval)
+            mm_f1 = f1_score(yval, mm_yval_)
+
+            if norm_f1 > mm_f1:
+                f1_tmp[i] = norm_f1
+                scaler_tmp[i] = 'normalize'
+            else:
+                f1_tmp[i] = mm_f1
+                scaler_tmp[i] = 'min_max_scale'
+            i = i + 1
+        best_idx = np.argmax(f1_tmp)
+        best_dist_iter_k.append(dist_names[best_idx])
+        best_f1_iter_k.append(np.max(f1_tmp))
+        best_scale_iter_k.append(scaler_tmp[best_idx])
+
+    best_idx = np.argmax(best_f1_iter_k)
+    best_k = list(range(1, 30, 2))[best_idx]
+    best_func = best_dist_iter_k[best_idx]
+    best_scaler = best_scale_iter_k[best_idx]
+    best_model = KNN(best_k, distance_funcs[best_func])
+    if best_scaler == 'normalize':
+        best_model.train(norm_Xtrain, ytrain)
+    else:
+        best_model.train(mm_Xtrain, ytrain)
+
+    return best_model, best_k, best_func, best_scaler
 
 
 class NormalizationScaler:
@@ -139,7 +214,16 @@ class NormalizationScaler:
         if the input features = [[3, 4], [1, -1], [0, 0]],
         the output should be [[0.6, 0.8], [0.707107, -0.707107], [0, 0]]
         """
-        raise NotImplementedError
+        cnt = len(features)
+        normed = []
+        for i in range(cnt):
+            x = features[i]
+            if any(x) is False:
+                x_ = x
+            else:
+                x_ = list(np.array(x) / np.linalg.norm(x))
+            normed.append(x_)
+        return normed
 
 
 class MinMaxScaler:
@@ -174,7 +258,8 @@ class MinMaxScaler:
     """
 
     def __init__(self):
-        pass
+        self.max = None
+        self.min = None
 
     def __call__(self, features: List[List[float]]) -> List[List[float]]:
         """
@@ -182,4 +267,14 @@ class MinMaxScaler:
         if the input features = [[2, -1], [-1, 5], [0, 0]],
         the output should be [[1, 0], [0, 1], [0.333333, 0.16667]]
         """
-        raise NotImplementedError
+        features = np.array(features)
+
+        if self.max is None:
+            self.max = features.max(axis=0)
+        if self.min is None:
+            self.min = features.min(axis=0)
+        features = (features - self.min) / (self.max - self.min)
+        diff = self.max - self.min
+        zero_idx = np.where(diff == 0)[0].tolist()
+        features[:, zero_idx] = 0
+        return features.tolist()
