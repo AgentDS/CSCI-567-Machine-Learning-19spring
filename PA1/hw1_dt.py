@@ -127,4 +127,10 @@ class TreeNode(object):
     def predict(self, feature):
         # feature: List[any]
         # return: int
-        raise NotImplementedError
+        if not self.splittable:
+            return self.cls_max
+        else:
+            f_value = feature[self.dim_split]
+            child_idx = self.feature_uniq_split.index(f_value)
+            self.children[child_idx].predict(feature[0:self.dim_split] + feature[self.dim_split + 1:])
+        
