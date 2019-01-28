@@ -47,9 +47,11 @@ def print_tree(decisionTree, node=None, name='branch 0', indent='', deep=0):
     for label in label_uniq:
         string += str(node.labels.count(label)) + ' : '
     print(indent + '\tnum of samples for each class: ' + string[:-2])
+    # print('\t' + indent, 'feature number:', node.f_len)  # TODO: for debug
 
     if node.splittable:
         print(indent + '\tsplit by dim {:d}'.format(node.dim_split))
+        # print('\t' + indent, 'feature value:', node.feature_uniq_split)  # TODO: for debug
         for idx_child, child in enumerate(node.children):
             print_tree(decisionTree, node=child, name='\t' + name + '->' + str(idx_child), indent=indent + '\t',
                        deep=deep + 1)

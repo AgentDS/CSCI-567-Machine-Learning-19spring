@@ -28,6 +28,7 @@ class DecisionTree():
         for idx, feature in enumerate(features):
             pred = self.root_node.predict(feature)
             y_pred.append(pred)
+            # print('')  # TODO: for debug
             # print ("feature: ", feature)
             # print ("pred: ", pred)
         return y_pred
@@ -61,6 +62,7 @@ class TreeNode(object):
         # if no feature left, then return self.cls_max
         if len(features[0]) == 0:
             self.splittable = False
+        # self.f_len = len(self.features[0])  # TODO: for debug
 
     # TODO: try to split current node
     def split(self):
@@ -131,6 +133,9 @@ class TreeNode(object):
             return self.cls_max
         else:
             f_value = feature[self.dim_split]
-            child_idx = self.feature_uniq_split.index(f_value)
-            self.children[child_idx].predict(feature[0:self.dim_split] + feature[self.dim_split + 1:])
-        
+            if f_value in self.feature_uniq_split:
+                child_idx = self.feature_uniq_split.index(f_value)
+                # print('child node', child_idx)  # TODO: for debug
+                return self.children[child_idx].predict(feature[0:self.dim_split] + feature[self.dim_split + 1:])
+            else:
+                return self.cls_max
