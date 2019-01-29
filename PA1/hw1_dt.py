@@ -25,13 +25,51 @@ class DecisionTree():
         # features: List[List[any]]
         # return List[int]
         y_pred = []
+        if type(features) == np.ndarray:
+            features = features.tolist()
         for idx, feature in enumerate(features):
             pred = self.root_node.predict(feature)
             y_pred.append(pred)
-            # print('')  # TODO: for debug
-            # print ("feature: ", feature)
-            # print ("pred: ", pred)
         return y_pred
+
+    # Get all nodes that is possible for pruning in the format of the path from the root->node
+    # (not always start with 0)
+    def get_all_nodes(self):
+        self.all_paths = []
+        if self.root_node.splittable:
+            self.all_paths = self.root_node.get_all_path()
+        all_nodes = []
+        for path in self.all_paths:
+            p_len = len(path)
+            path_tmp = path[:p_len - 1]
+            if p_len > 1:
+                tmp_nodes = [path[:i] for i in range(1, p_len)]
+                all_nodes += tmp_nodes
+        all_nodes = np.unique(all_nodes).tolist()
+        self.all_nodes = []
+        for node in all_nodes:
+            if type(node) == int:
+                node = [node]
+            self.all_nodes.append(node)
+
+    def pruning(self, node_path):
+        self.root_node.pruning(node_path)
+
+    def resume(self, node_path):
+        self.root_node.resume(node_path)
+
+    def deactive(self, node_path):
+        self.root_node.deactive(node_path)
+
+    def extreme_deactive(self):
+        self.root_node.splittable = False
+
+    def extreme_resume(self):
+        self.root_node.splittable = True
+
+    def extreme_pruning(self):
+        self.root_node.splittable = False
+        self.root_node.children = []
 
 
 class TreeNode(object):
@@ -62,7 +100,6 @@ class TreeNode(object):
         # if no feature left, then return self.cls_max
         if len(features[0]) == 0:
             self.splittable = False
-        # self.f_len = len(self.features[0])  # TODO: for debug
 
     # TODO: try to split current node
     def split(self):
@@ -135,7 +172,38 @@ class TreeNode(object):
             f_value = feature[self.dim_split]
             if f_value in self.feature_uniq_split:
                 child_idx = self.feature_uniq_split.index(f_value)
-                # print('child node', child_idx)  # TODO: for debug
                 return self.children[child_idx].predict(feature[0:self.dim_split] + feature[self.dim_split + 1:])
             else:
                 return self.cls_max
+
+    # TODO: search for all possible paths in the decision tree
+    def get_all_path(self):
+        if not self.splittable:
+            return [[]]
+        all_paths = []
+        for i in range(len(self.children)):
+            paths = [[i] + p for p in self.children[i].get_all_path()]
+            all_paths += paths
+        return all_paths
+
+    def deactive(self, node_path):
+        if len(node_path) > 0:
+            self.children[node_path[0]].deactive(node_path[1:])
+        else:
+            self.splittable = False
+        return
+
+    def resume(self, node_path):
+        if len(node_path) > 0:
+            self.children[node_path[0]].resume(node_path[1:])
+        else:
+            self.splittable = True
+        return
+
+    def pruning(self, node_path):
+        if len(node_path) > 0:
+            self.children[node_path[0]].deactive(node_path[1:])
+        else:
+            self.splittable = False
+            self.children = []
+        return

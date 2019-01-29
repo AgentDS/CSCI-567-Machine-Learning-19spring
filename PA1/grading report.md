@@ -1,4 +1,4 @@
-[Executed at: Mon Jan 28 3:17:34 PST 2019]
+[Executed at: Tue Jan 29 15:35:19 PST 2019]
 
 test_f1_score function get: 3/3
 \--
@@ -48,34 +48,37 @@ test_information_gain function get: 10/10
 \--
 test_decision_tree_1 train function get: 3/3
 \--
-test_decision_tree_1 prediction function get: 0/2
+test_decision_tree_1 prediction function get: 2/2
 \--
 test_decision_tree_2 train function get: 3/3
 \--
-test_decision_tree_2 prediction function get: 0/2
+test_decision_tree_2 prediction function get: 2/2
 \--
 test_decision_tree_3 train function get: 3/3
 \--
-test_decision_tree_3 prediction function get: 0/2
+test_decision_tree_3 prediction function get: 2/2
 \--
 test_decision_tree_4 train function get: 3/3
 \--
-test_decision_tree_4 prediction function get: 0/2
+test_decision_tree_4 prediction function get: 2/2
 \--
-test_decision_tree_pruning_1 failed, Please check your pruning function
+test_decision_tree_pruning_1 function get: 3/3
 \--
-test_decision_tree_pruning_2 failed, Please check your pruning function
+test_decision_tree_pruning_2 function get: 3/3
 \--
-test_decision_tree_pruning_3 failed, Please check your pruning function
+test_decision_tree_pruning_3 function get: 3/3
 \--
-test_decision_tree_pruning_4 failed, Please check your pruning function
+test_decision_tree_pruning_4 function get: 3/3
 \--
 test_decision_tree_5 train function get: 3/3
 \--
-test_decision_tree_prediction_5 function get: 0/2
+test_decision_tree_prediction_5 function get: 2/2
 \--
-test_decision_tree_5 failed
+test_decision_tree_pruning_5 function get: 3/3
 \--
 ...###...
-Total score for PA1: 75/100
+Total score for PA1: 100/100
 \--
+processing time 8.541996955871582
+
+----- Grading Finished, Please check your grading report above to see if you failed on any test -------

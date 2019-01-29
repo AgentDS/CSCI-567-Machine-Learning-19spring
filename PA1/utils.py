@@ -2,6 +2,8 @@ import numpy as np
 from typing import List
 from hw1_knn import KNN
 
+from copy import copy
+
 
 # TODO: Information Gain function
 def Information_Gain(S, branches):
@@ -32,7 +34,52 @@ def reduced_error_prunning(decisionTree, X_test, y_test):
     # decisionTree
     # X_test: List[List[any]]
     # y_test: List
-    raise NotImplementedError
+    y_pred = decisionTree.predict(X_test)
+    best_acc = my_accuracy_score(y_pred, y_test)
+    decisionTree.get_all_nodes()
+    possible_nodes = decisionTree.all_nodes
+    old_best_acc = 0
+    best_node_path = []
+
+    while len(possible_nodes) > 0:
+        acc_record = [0 for i in range(len(possible_nodes))]
+        for i in range(len(possible_nodes)):
+            node_path = possible_nodes[i]
+            # if type(node_path) == int:
+            #     node_path = [node_path]
+            decisionTree.deactive(node_path)
+            y_est_test = decisionTree.predict(X_test)
+            acc_record[i] = my_accuracy_score(y_est_test, y_test)
+            decisionTree.resume(node_path)
+        local_best_acc = np.max(acc_record)
+        if local_best_acc > best_acc:
+            best_idx = np.argmax(acc_record)
+            best_node_path = possible_nodes[best_idx]
+            decisionTree.pruning(best_node_path)
+            old_best_acc = best_acc
+            best_acc = local_best_acc
+        else:
+            break
+
+        decisionTree.get_all_nodes()
+        possible_nodes = decisionTree.all_nodes
+        # if type(best_node_path) == int:
+        #     best_node_path = [best_node_path]
+        routine_nodes = [best_node_path[0:i] for i in range(1, len(best_node_path))]
+        for node in routine_nodes:
+            possible_nodes.remove(node)
+
+    # check for extreme pruning (pruning the root node)
+    decisionTree.extreme_deactive()
+    y_est_test = decisionTree.predict(X_test)
+    extreme_acc = my_accuracy_score(y_est_test, y_test)
+    decisionTree.extreme_resume()
+    if extreme_acc > best_acc:
+        decisionTree.extreme_pruning()
+
+
+def my_accuracy_score(y_pred, y_true):
+    return np.sum(np.array(y_pred) == np.array(y_true)) / len(y_true)
 
 
 # print current tree
@@ -47,11 +94,9 @@ def print_tree(decisionTree, node=None, name='branch 0', indent='', deep=0):
     for label in label_uniq:
         string += str(node.labels.count(label)) + ' : '
     print(indent + '\tnum of samples for each class: ' + string[:-2])
-    # print('\t' + indent, 'feature number:', node.f_len)  # TODO: for debug
 
     if node.splittable:
         print(indent + '\tsplit by dim {:d}'.format(node.dim_split))
-        # print('\t' + indent, 'feature value:', node.feature_uniq_split)  # TODO: for debug
         for idx_child, child in enumerate(node.children):
             print_tree(decisionTree, node=child, name='\t' + name + '->' + str(idx_child), indent=indent + '\t',
                        deep=deep + 1)
