@@ -9,6 +9,7 @@ tune_lambda, test_error and mapping_data.
 import numpy as np
 import pandas as pd
 
+
 ###### Q1.1 ######
 def mean_square_error(w, X, y):
     """
@@ -22,25 +23,29 @@ def mean_square_error(w, X, y):
     """
     #####################################################
     # TODO 1: Fill in your code here #
+    Xw_y = np.matmul(X, w) - y
+    err = np.matmul(Xw_y.T, Xw_y) / y.shape[0]
     #####################################################
-    err = None
     return err
+
 
 ###### Q1.2 ######
 def linear_regression_noreg(X, y):
-  """
-  Compute the weight parameter given X and y.
-  Inputs:
-  - X: A numpy array of shape (num_samples, D) containing feature.
-  - y: A numpy array of shape (num_samples, ) containing label
-  Returns:
-  - w: a numpy array of shape (D, )
-  """
-  #####################################################
-  #	TODO 2: Fill in your code here #
-  #####################################################		
-  w = None
-  return w
+    """
+    Compute the weight parameter given X and y.
+    Inputs:
+    - X: A numpy array of shape (num_samples, D) containing feature.
+    - y: A numpy array of shape (num_samples, ) containing label
+    Returns:
+    - w: a numpy array of shape (D, )
+    """
+    #####################################################
+    #	TODO 2: Fill in your code here #
+    XtX_inv = np.linalg.inv(np.matmul(X.T, X))
+    w = np.matmul(np.matmul(XtX_inv, X.T), y)
+    #####################################################
+    return w
+
 
 ###### Q1.3 ######
 def linear_regression_invertible(X, y):
@@ -54,8 +59,19 @@ def linear_regression_invertible(X, y):
     """
     #####################################################
     # TODO 3: Fill in your code here #
+    XtX = np.matmul(X.T, X)
+    eigenValues, _ = np.linalg.eig(XtX)
+    idx = np.abs(eigenValues).argsort()
+    minimum_eigValue = eigenValues[idx[0]]
+    eye_mat = np.eye(X.shape[1], dtype=float)
+    while minimum_eigValue < 1e-5:
+        XtX += 1e-1 * eye_mat
+        eigenValues, _ = np.linalg.eig(XtX)
+        idx = np.abs(eigenValues).argsort()
+        minimum_eigValue = eigenValues[idx[0]]
+    XtX_inv = np.linalg.inv(XtX)
+    w = np.matmul(np.matmul(XtX_inv, X.T), y)
     #####################################################
-    w = None
     return w
 
 
@@ -70,11 +86,15 @@ def regularized_linear_regression(X, y, lambd):
     Returns:
     - w: a numpy array of shape (D, )
     """
-  #####################################################
-  # TODO 4: Fill in your code here #
-  #####################################################		
-    w = None
+    #####################################################
+    # TODO 4: Fill in your code here #
+    XtX = np.matmul(X.T, X)
+    eye_mat = np.eye(X.shape[1], dtype=float)
+    mat_inv = np.linalg.inv(XtX + lambd * eye_mat)
+    w = np.matmul(np.matmul(mat_inv, X.T), y)
+    #####################################################
     return w
+
 
 ###### Q1.5 ######
 def tune_lambda(Xtrain, ytrain, Xval, yval):
@@ -90,10 +110,23 @@ def tune_lambda(Xtrain, ytrain, Xval, yval):
     """
     #####################################################
     # TODO 5: Fill in your code here #
-    #####################################################		
-    bestlambda = None
+    mse_hist = []
+    power = [i for i in range(-19, 20)]
+    lambd_hist = []
+    for p in power:
+        if p < 0:
+            lambd = 1 / (10 ** (-p))
+        else:
+            lambd = 10 ** p
+        lambd_hist.append(lambd)
+        w = regularized_linear_regression(Xtrain, ytrain, lambd)
+        err = mean_square_error(w, Xval, yval)
+        mse_hist.append(err)
+    best_idx = np.argmin(mse_hist)
+    bestlambda = lambd_hist[best_idx]
+    #####################################################
     return bestlambda
-    
+
 
 ###### Q1.6 ######
 def mapping_data(X, power):
@@ -107,8 +140,9 @@ def mapping_data(X, power):
     """
     #####################################################
     # TODO 6: Fill in your code here #
+    X_list = []
+    for i in range(1, power + 1):
+        X_list.append(np.power(X, i))
+    X = np.concatenate(X_list, axis=1)
     #####################################################		
-    
     return X
-
-
