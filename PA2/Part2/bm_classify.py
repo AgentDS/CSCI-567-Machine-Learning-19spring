@@ -21,32 +21,37 @@ def binary_train(X, y, loss="perceptron", w0=None, b0=None, step_size=0.5, max_i
     N, D = X.shape
     assert len(np.unique(y)) == 2
 
-
     w = np.zeros(D)
     if w0 is not None:
         w = w0
-    
+
     b = 0
     if b0 is not None:
         b = b0
 
+    # pre-processing for label data
+    y = y * 2 - 1
     if loss == "perceptron":
         ############################################
         # TODO 1 : Edit this if part               #
         #          Compute w and b here            #
-        w = np.zeros(D)
-        b = 0
-        ############################################
-        
+        for i in range(max_iterations):
+            z = (np.matmul(X, w) + b) * y
+            w += step_size * w_avg_gradient(X, y, z, loss)
+            b += step_size * b_avg_gradient(X, y, z, loss)
+
+    ############################################
 
     elif loss == "logistic":
         ############################################
         # TODO 2 : Edit this if part               #
         #          Compute w and b here            #
-        w = np.zeros(D)
-        b = 0
-        ############################################
-        
+        for i in range(max_iterations):
+            z = (np.matmul(X, w) + b) * y
+            w += step_size * w_avg_gradient(X, y, z, loss)
+            b += step_size * b_avg_gradient(X, y, z, loss)
+
+    ############################################
 
     else:
         raise "Loss Function is undefined."
@@ -54,8 +59,34 @@ def binary_train(X, y, loss="perceptron", w0=None, b0=None, step_size=0.5, max_i
     assert w.shape == (D,)
     return w, b
 
+
+def w_avg_gradient(X, y, z, loss="perceptron"):
+    N, D = X.shape
+    if loss == "perceptron":
+        sgn = (z <= 0).astype(float)
+        all_gradient = np.matmul(X.T, sgn * y)
+    elif loss == "logistic":
+        all_gradient = np.matmul(X.T, sigmoid(-z) * y)
+    else:
+        raise "Loss Function is undefined."
+
+    return all_gradient / N
+
+
+def b_avg_gradient(X, y, z, loss="perceptron"):
+    N, D = X.shape
+    if loss == "perceptron":
+        sgn = (z <= 0).astype(float)
+        all_gradient = np.dot(sgn, y)
+    elif loss == "logistic":
+        all_gradient = np.dot(sigmoid(-z), y)
+    else:
+        raise "Loss Function is undefined."
+
+    return all_gradient / N
+
+
 def sigmoid(z):
-    
     """
     Inputs:
     - z: a numpy array or a float number
@@ -67,10 +98,11 @@ def sigmoid(z):
     ############################################
     # TODO 3 : Edit this part to               #
     #          Compute value                   #
-    value = z
+    value = 1 / (1 + np.exp(-z))
     ############################################
-    
+
     return value
+
 
 def binary_predict(X, w, b, loss="perceptron"):
     """
@@ -86,37 +118,33 @@ def binary_predict(X, w, b, loss="perceptron"):
     - preds: N dimensional vector of binary predictions: {0, 1}
     """
     N, D = X.shape
-    
+
     if loss == "perceptron":
         ############################################
         # TODO 4 : Edit this if part               #
         #          Compute preds                   #
-        preds = np.zeros(N)
+        z = np.matmul(X, w) + b
+        preds = (z > 0).astype(int)
         ############################################
-        
-
     elif loss == "logistic":
         ############################################
         # TODO 5 : Edit this if part               #
         #          Compute preds                   #
-        preds = np.zeros(N)
+        z = sigmoid(np.matmul(X, w) + b)
+        preds = (z > 0.5).astype(int)
         ############################################
-        
-
     else:
         raise "Loss Function is undefined."
-    
 
-    assert preds.shape == (N,) 
+    assert preds.shape == (N,)
     return preds
 
 
-
 def multiclass_train(X, y, C,
-                     w0=None, 
+                     w0=None,
                      b0=None,
                      gd_type="sgd",
-                     step_size=0.5, 
+                     step_size=0.5,
                      max_iterations=1000):
     """
     Inputs:
@@ -141,38 +169,66 @@ def multiclass_train(X, y, C,
     w = np.zeros((C, D))
     if w0 is not None:
         w = w0
-    
+
     b = np.zeros(C)
     if b0 is not None:
         b = b0
+
+    w_ = np.concatenate([w, b.reshape(C, 1)], axis=1)
+    X_ = np.concatenate([X, np.ones((N, 1))], axis=1)
 
     np.random.seed(42)
     if gd_type == "sgd":
         ############################################
         # TODO 6 : Edit this if part               #
         #          Compute w and b                 #
-        w = np.zeros((C, D))
-        b = np.zeros(C)
-        ############################################
-        
+        for i in range(max_iterations):
+            n = np.random.choice(N)
+            w_ -= step_size * multi_w_gradient(X_[n, :], y[n], C, w_, gd_type)
+        w = w_[:, :D]
+        b = w_[:, D]
+    ############################################
 
     elif gd_type == "gd":
         ############################################
         # TODO 7 : Edit this if part               #
         #          Compute w and b                 #
-        w = np.zeros((C, D))
-        b = np.zeros(C)
-        ############################################
-        
+        # for i in range(max_iterations):
+        #
+        for i in range(max_iterations):
+            w_ -= step_size * multi_w_gradient(X_, y, C, w_, gd_type)
+        w = w_[:, :D]
+        b = w_[:, D]
+    ############################################
 
     else:
         raise "Type of Gradient Descent is undefined."
-    
 
     assert w.shape == (C, D)
     assert b.shape == (C,)
 
     return w, b
+
+
+# TODO
+def multi_w_gradient(x, y, C, w, gd_type="sgd"):
+    if gd_type == "sgd":
+        one_hot = np.zeros(C)
+        one_hot[y] = 1
+        exps = np.exp(np.matmul(w, x))  # shape is (C,)
+        sum_exp = np.sum(exps)
+        tmp = exps / sum_exp - one_hot
+        gradient = np.matmul(tmp.reshape(C, 1), x.reshape(1, x.shape[0]))
+    elif gd_type == 'gd':
+        N, D = x.shape
+        one_hot = np.eye(C)[y]
+        exps = np.exp(np.matmul(x, w.T))  # shape is (N,C)
+        sum_exp = np.sum(exps, axis=1)  # shape is (N,)
+        tmp = exps.T / sum_exp - one_hot.T  # shape is (C,N)
+        gradient = np.matmul(tmp, x) / N
+    else:
+        raise "Type of Gradient Descent is undefined."
+    return gradient
 
 
 def multiclass_predict(X, w, b):
@@ -192,13 +248,8 @@ def multiclass_predict(X, w, b):
     ############################################
     # TODO 8 : Edit this part to               #
     #          Compute preds                   #
-    preds = np.zeros(N)
+    preds = np.argmax(np.matmul(X, w.T) + b, axis=1)
     ############################################
 
     assert preds.shape == (N,)
     return preds
-
-
-
-
-        
