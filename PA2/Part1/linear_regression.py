@@ -144,5 +144,5 @@ def mapping_data(X, power):
     for i in range(1, power + 1):
         X_list.append(np.power(X, i))
     X = np.concatenate(X_list, axis=1)
-    #####################################################		
+    #####################################################
     return X

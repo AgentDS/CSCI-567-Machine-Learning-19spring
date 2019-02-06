@@ -215,7 +215,8 @@ def multi_w_gradient(x, y, C, w, gd_type="sgd"):
     if gd_type == "sgd":
         one_hot = np.zeros(C)
         one_hot[y] = 1
-        exps = np.exp(np.matmul(w, x))  # shape is (C,)
+        z = np.max(np.matmul(w, x))
+        exps = np.exp(z - z.max())  # shape is (C,)
         sum_exp = np.sum(exps)
         tmp = exps / sum_exp - one_hot
         gradient = np.matmul(tmp.reshape(C, 1), x.reshape(1, x.shape[0]))
