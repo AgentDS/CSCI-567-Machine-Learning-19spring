@@ -18,10 +18,17 @@ def get_k_means_plus_plus_center_indices(n, n_cluster, x, generator=np.random):
     # TODO:
     # implement the Kmeans++ algorithm of how to choose the centers according to the lecture and notebook
     # Choose 1st center randomly and use Euclidean distance to calculate other centers.
-    raise Exception(
-             'Implement get_k_means_plus_plus_center_indices function in Kmeans.py')
+    _, m = x.shape
+    centers = np.zeros(n_cluster, dtype=int)
+    r = np.floor(generator.rand() * 11).astype(int)
+    centers[0] = r
 
-    
+    for c_i in range(1, n_cluster):
+        previous_center = x[centers[c_i - 1], :]
+        cumsum_probs = Euclidean_distance_prob(previous_center, x)
+        idx = random_plate(generator.rand(), cumsum_probs)
+        centers[c_i] = idx
+    centers = centers.tolist()
 
     # DO NOT CHANGE CODE BELOW THIS LINE
 
@@ -29,15 +36,26 @@ def get_k_means_plus_plus_center_indices(n, n_cluster, x, generator=np.random):
     return centers
 
 
+def Euclidean_distance_prob(center, x):
+    distances = np.sum((x - center) ** 2, axis=1) ** 0.5
+    probs = distances / np.sum(distances)
+    return np.cumsum(probs)
+
+
+def random_plate(random_number, cumsum_probs):
+    n = len(cumsum_probs)
+    for i in range(n):
+        if random_number <= cumsum_probs[i]:
+            return i
+        else:
+            continue
+
 
 def get_lloyd_k_means(n, n_cluster, x, generator):
     return generator.choice(n, size=n_cluster)
 
 
-
-
 class KMeans():
-
     '''
         Class KMeans:
         Attr:
@@ -48,6 +66,7 @@ class KMeans():
             The default is np.random here but in grading, to calculate deterministic results,
             We will be using our own random number generator.
     '''
+
     def __init__(self, n_cluster, max_iter=100, e=0.0001, generator=np.random):
         self.n_cluster = n_cluster
         self.max_iter = max_iter
@@ -55,7 +74,6 @@ class KMeans():
         self.generator = generator
 
     def fit(self, x, centroid_func=get_lloyd_k_means):
-
         '''
             Finds n_cluster in the data x
             params:
@@ -63,11 +81,13 @@ class KMeans():
                 centroid_func - To specify which algorithm we are using to compute the centers(Lloyd(regular) or Kmeans++)
             returns:
                 A tuple
-                (centroids a n_cluster X D numpy array, y a length (N,) numpy array where cell i is the ith sample's assigned cluster, number_of_updates a Int)
+                (centroids a n_cluster X D numpy array,
+                 y a length (N,) numpy array where cell i is the ith sample's assigned cluster,
+                number_of_updates a Int)
             Note: Number of iterations is the number of time you update the assignment
         '''
         assert len(x.shape) == 2, "fit function takes 2-D numpy arrays as input"
-        
+
         N, D = x.shape
 
         self.centers = centroid_func(len(x), self.n_cluster, x, self.generator)
@@ -79,17 +99,58 @@ class KMeans():
         # - return (means, membership, number_of_updates)
 
         # DONOT CHANGE CODE ABOVE THIS LINE
-        raise Exception(
-             'Implement fit function in KMeans class')
-        
+        y = np.zeros(N)
+        centroids = x[self.centers]
+        old_centroids = centroids
+
+        for i in range(self.max_iter):
+            y = decide_class(centroids, x)
+            centroids = self.update_centroids(x, y, centroids)
+            if self.isconvergent(old_centroids, centroids):
+                break
+            else:
+                old_centroids = centroids
+                continue
+        self.max_iter = i + 1
         # DO NOT CHANGE CODE BELOW THIS LINE
         return centroids, y, self.max_iter
 
-        
+    def isconvergent(self, old_centroids, centroids):
+        diff = np.sum((old_centroids - centroids) ** 2, axis=1) ** 0.5
+        if self.e > diff.max():
+            return True
+        else:
+            return False
+
+    def update_centroids(self, x, y, centroids):
+        N, D = x.shape
+        for i in range(self.n_cluster):
+            idx = np.argwhere(y == i)
+            idx = idx.reshape(len(idx))
+            if len(idx) > 0:
+                data_c_i = x[idx]
+                centroids[i] = data_c_i.mean(axis=0)
+        return centroids
+
+
+def decide_class(centroids, x):
+    N, D = x.shape
+    n_cluster = len(centroids)
+    distance = []
+    for center in centroids:
+        dist = Euclidean_distance(center, x)
+        distance.append(dist)
+    distance = np.concatenate(distance).reshape(n_cluster, N)
+    class_assign = np.argmin(distance, axis=0)
+    return class_assign
+
+
+def Euclidean_distance(center, x):
+    distances = np.sum((x - center) ** 2, axis=1) ** 0.5
+    return distances
 
 
 class KMeansClassifier():
-
     '''
         Class KMeansClassifier:
         Attr:
@@ -106,7 +167,6 @@ class KMeansClassifier():
         self.max_iter = max_iter
         self.e = e
         self.generator = generator
-
 
     def fit(self, x, y, centroid_func=get_lloyd_k_means):
         '''
@@ -137,12 +197,19 @@ class KMeansClassifier():
         # - assign labels to centroid_labels
 
         # DONOT CHANGE CODE ABOVE THIS LINE
-        raise Exception(
-             'Implement fit function in KMeansClassifier class')
+        kmeans = KMeans(self.n_cluster, self.max_iter, self.e, self.generator)
+        centroids, kmeans_y, _ = kmeans.fit(x, centroid_func)
+        centroid_labels = np.zeros(self.n_cluster, dtype=int)
+        for i in range(self.n_cluster):
+            idx = np.argwhere(kmeans_y == y)
+            idx = idx.reshape(len(idx))
+            label_i = y[idx].tolist()
+            if len(label_i) > 0:
+                unique_elements, counts_elements = np.unique(label_i, return_counts=True)
+                centroid_labels[i] = unique_elements[np.argmax(counts_elements)]
+            else:
+                centroid_labels[i] = 0
 
-        
-
-        
         # DONOT CHANGE CODE BELOW THIS LINE
 
         self.centroid_labels = centroid_labels
@@ -173,13 +240,13 @@ class KMeansClassifier():
         # - return labels
 
         # DONOT CHANGE CODE ABOVE THIS LINE
-        raise Exception(
-             'Implement predict function in KMeansClassifier class')
-        
-        
+        cluster_assign = decide_class(self.centroids, x)
+        labels = []
+        for i in range(len(cluster_assign)):
+            labels.append(self.centroid_labels[cluster_assign[i]])
         # DO NOT CHANGE CODE BELOW THIS LINE
         return np.array(labels)
-        
+
 
 def transform_image(image, code_vectors):
     '''
@@ -202,10 +269,13 @@ def transform_image(image, code_vectors):
     # - implement the function
 
     # DONOT CHANGE CODE ABOVE THIS LINE
-    raise Exception(
-             'Implement transform_image function')
-    
-
+    H, W, _ = image.shape
+    x = image.reshape(H * W, 3)
+    n_cluster, _ = code_vectors.shape
+    class_assign = decide_class(code_vectors, x)
+    new_im = np.zeros(shape=(H * W, 3))
+    for i in range(H * W):
+        new_im[i, :] = code_vectors[class_assign[i], :]
+    new_im = new_im.reshape(H, W, 3)
     # DONOT CHANGE CODE BELOW THIS LINE
     return new_im
-
