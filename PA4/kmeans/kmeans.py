@@ -102,25 +102,36 @@ class KMeans():
         y = np.zeros(N)
         centroids = x[self.centers]
         old_centroids = centroids
-
+        old_J = self.obj_value(centroids, x, y)
         for i in range(self.max_iter):
             y = decide_class(centroids, x)
             centroids = self.update_centroids(x, y, centroids)
-            if self.isconvergent(old_centroids, centroids):
+            J = self.obj_value(centroids, x, y)
+            if self.isconvergent(old_J, J):
                 break
             else:
-                old_centroids = centroids
+                old_J = J
                 continue
         self.max_iter = i + 1
         # DO NOT CHANGE CODE BELOW THIS LINE
         return centroids, y, self.max_iter
 
-    def isconvergent(self, old_centroids, centroids):
-        diff = np.sum((old_centroids - centroids) ** 2, axis=1) ** 0.5
-        if self.e > diff.max():
+    def isconvergent(self, old_J, J):
+        diff = np.abs(old_J - J)
+        if self.e >= diff:
             return True
         else:
             return False
+
+    def obj_value(self, centroids, x, y):
+        J = 0
+        for i in range(self.n_cluster):
+            idx = np.argwhere(y == i)
+            idx = idx.reshape(len(idx))
+            if len(idx) > 0:
+                data_c_i = x[idx]
+                J += np.sum(Euclidean_distance(centroids[i], data_c_i)**2)
+        return J
 
     def update_centroids(self, x, y, centroids):
         N, D = x.shape
@@ -198,10 +209,10 @@ class KMeansClassifier():
 
         # DONOT CHANGE CODE ABOVE THIS LINE
         kmeans = KMeans(self.n_cluster, self.max_iter, self.e, self.generator)
-        centroids, kmeans_y, _ = kmeans.fit(x, centroid_func)
+        centroids, class_assign, iter_num = kmeans.fit(x, centroid_func)
         centroid_labels = np.zeros(self.n_cluster, dtype=int)
         for i in range(self.n_cluster):
-            idx = np.argwhere(kmeans_y == y)
+            idx = np.argwhere(class_assign == i)
             idx = idx.reshape(len(idx))
             label_i = y[idx].tolist()
             if len(label_i) > 0:
