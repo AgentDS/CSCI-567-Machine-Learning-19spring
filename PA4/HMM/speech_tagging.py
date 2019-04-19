@@ -88,8 +88,12 @@ def model_training(train_data, tags):
     train_size = len(train_data)
 
     # get state_dict using tags data
-    S = len(tags)
+    # tag_bag = []
+    # for i in range(train_size):
+    #     tag_bag += train_data[i].tags
+    # tag_bag = list(set(tag_bag))
     state_dict = make_dict(tags)
+    S = len(tags)
 
     # get obs_dict using training data
     word_bag = []
@@ -104,6 +108,27 @@ def model_training(train_data, tags):
     A = np.zeros(shape=(S, S))  # (S, S)
     B = np.zeros(shape=(S, num_obs_symbols))  # (S, num_obs_symbols)
 
+    # compute parameters using MLE
+    for i in range(train_size):
+        sentence = train_data[i]
+        x1 = sentence.tags[0]
+        pi[state_dict[x1]] += 1
+        L = sentence.length
+        for t in range(L - 1):
+            x_now = sentence.tags[t]
+            z_now = sentence.words[t]
+            x_next = sentence.tags[t + 1]
+            A[state_dict[x_now], state_dict[x_next]] += 1
+            B[state_dict[x_now], obs_dict[z_now]] += 1
+        x_now = sentence.tags[L - 1]
+        z_now = sentence.words[L - 1]
+        B[state_dict[x_now], obs_dict[z_now]] += 1
+    # normalized
+    A = (A.T / np.sum(A, axis=1)).T
+    B = (B.T / np.sum(B, axis=1)).T
+    pi = pi / np.sum(pi)
+
+    # build the model
     model = HMM(pi, A, B, obs_dict, state_dict)
     ###################################################
     return model
@@ -122,8 +147,20 @@ def speech_tagging(test_data, model, tags):
     tagging = []
     ###################################################
     num_sentence = len(test_data)
-    for i in range(test_data):
+    for i in range(len(test_data)):
         sentence = test_data[i]
+        obs_seq = sentence.words
+
+        # check whether exist new observations
+        new_obs = []
+        for word in obs_seq:
+            if word not in model.obs_dict:
+                new_obs.append(word)
+        model.add_obs(new_obs)
+
+        # predict using Viterbi algorithm
+        tag = model.viterbi(obs_seq)
+        tagging.append(tag)
 
     ###################################################
     return tagging
@@ -133,5 +170,5 @@ def make_dict(text_list):
     size = len(text_list)
     text_dict = dict()
     for i in range(size):
-        text_dict[text_list[i]] = i
+        text_dict[text_list[i]] = int(i)
     return text_dict

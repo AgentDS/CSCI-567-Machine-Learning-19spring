@@ -173,3 +173,17 @@ class HMM:
             path[t - 1] = idx_to_symbol[path_idx[t - 1]]
         ###################################################
         return path
+
+    def add_obs(self, new_obs):
+        """
+        Inputs:
+        - new_obs: (1*n) A list of n new observations
+
+        """
+        n = len(new_obs)
+        S, n_obs = self.B.shape
+        new_obs_dict = dict()
+        for i in range(n_obs, n_obs + n):
+            new_obs_dict[new_obs[i - n_obs]] = i
+        self.obs_dict.update(new_obs_dict)
+        self.B = np.concatenate((self.B, np.ones(shape=(S, n)) * 1.0e-6), axis=1)
