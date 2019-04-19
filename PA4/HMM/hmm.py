@@ -34,7 +34,22 @@ class HMM:
         L = len(Osequence)
         alpha = np.zeros([S, L])
         ###################################################
-        # Edit here
+        # translate Observation from symbol to index
+        observations = np.zeros(L, dtype=int)
+        for t in range(L):
+            observations[t] = self.obs_dict[Osequence[t]]
+
+        # initialization for t = 1
+        z_t = observations[0]
+        for s in range(S):
+            alpha[s, 0] = self.pi[s] * self.B[s, z_t]
+
+        # dynamic programing for t = 2 to T
+        for t in range(1, L):
+            z_t = observations[t]
+            for s in range(S):
+                b_sz = self.B[s, z_t]
+                alpha[s, t] = b_sz * np.dot(alpha[:, t - 1], self.A[:, s])
         ###################################################
         return alpha
 
@@ -54,7 +69,20 @@ class HMM:
         L = len(Osequence)
         beta = np.zeros([S, L])
         ###################################################
-        # Edit here
+        # translate Observation from symbol to index
+        observations = np.zeros(L, dtype=int)
+        for t in range(L):
+            observations[t] = self.obs_dict[Osequence[t]]
+
+        # initialization for t = T
+        z_t = observations[L - 1]
+        for s in range(S):
+            beta[s, L - 1] = 1
+
+        # dynamic programming for t = T-1 to 1
+        for t in range(L - 2, -1, -1):
+            for s in range(S):
+                beta[s, t] = np.sum(self.A[s, :] * self.B[:, observations[t + 1]] * beta[:, t + 1])
         ###################################################
         return beta
 
@@ -69,7 +97,11 @@ class HMM:
         """
         prob = 0
         ###################################################
-        # Edit here
+        # use forward algorithm to compute forward message
+        alpha = self.forward(Osequence)
+
+        # use forward message to compute sequence prob
+        prob = np.sum(alpha[:, -1])
         ###################################################
         return prob
 
@@ -84,7 +116,13 @@ class HMM:
         """
         prob = 0
         ###################################################
-        # Edit here
+        seq_prob = self.sequence_prob(Osequence)
+
+        # get forward message and backward message
+        alpha = self.forward(Osequence)
+        beta = self.backward(Osequence)
+
+        prob = alpha * beta / seq_prob
         ###################################################
         return prob
 
@@ -97,8 +135,40 @@ class HMM:
         Returns:
         - path: A List of the most likely hidden state path k* (return state instead of idx)
         """
-        path = []
-        ###################################################
-        # Edit here
+        S = len(self.pi)
+        L = len(Osequence)
+
+        # translate Observation from symbol to index
+        observations = np.zeros(L, dtype=int)
+        for t in range(L):
+            observations[t] = self.obs_dict[Osequence[t]]
+
+        # initialization for delta (prob np.array) and Delta (state index np.array)
+        delta = np.zeros(shape=(S, L))
+        Delta = np.ones(shape=(S, L), dtype=int) * -1  # -1 means not decided yet or no need for previous state (t=1)
+
+        # initialize for t = 1
+        delta[:, 0] = self.B[:, observations[0]] * self.pi
+
+        # dynamic programming for Viterbi algorithm
+        for t in range(1, L):
+            delta[:, t] = self.B[:, observations[t]] * np.max((self.A[:, :].T * delta[:, t - 1]).T, axis=0)
+            Delta[:, t] = np.argmax((self.A[:, :].T * delta[:, t - 1]).T, axis=0)
+
+        # get list map state index to state symbol
+        idx_to_symbol = [i[0] for i in sorted(self.state_dict.items(), key=lambda kv: kv[1])]
+
+        # find path using Delta
+        path = [None for t in range(L)]
+        # prev_idx = int(np.argmax(delta[:, L - 1]))
+        # path[L - 1] = idx_to_symbol[prev_idx]
+        self.delta = delta
+        self.Delta = Delta
+        path_idx = np.ones(L, dtype=int) * -1
+        path_idx[L - 1] = int(np.argmax(delta[:, L - 1]))
+        path[L - 1] = idx_to_symbol[path_idx[L - 1]]
+        for t in range(L - 1, 0, -1):
+            path_idx[t - 1] = Delta[path_idx[t], t]
+            path[t - 1] = idx_to_symbol[path_idx[t - 1]]
         ###################################################
         return path
