@@ -102,6 +102,7 @@ class HMM:
 
         # use forward message to compute sequence prob
         prob = np.sum(alpha[:, -1])
+        self.seq_prob = prob
         ###################################################
         return prob
 

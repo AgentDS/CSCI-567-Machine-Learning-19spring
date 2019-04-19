@@ -19,7 +19,6 @@ def accuracy(predict_tagging, true_tagging):
 
 
 class Dataset:
-
     def __init__(self, tagfile, datafile, train_test_split=0.8, seed=int(time.time())):
         tags = self.read_tags(tagfile)
         data = self.read_data(datafile)
@@ -29,7 +28,8 @@ class Dataset:
             new_line = self.Line(l)
             if new_line.length > 0:
                 lines.append(new_line)
-        if seed is not None: random.seed(seed)
+        if seed is not None:
+            random.seed(seed)
         random.shuffle(lines)
         train_size = int(train_test_split * len(data))
         self.train_data = lines[:train_size]
@@ -84,7 +84,27 @@ def model_training(train_data, tags):
     """
     model = None
     ###################################################
-    # Edit here
+    # tags are the states (X) that are not observed, words are the obs sequence (Z)
+    train_size = len(train_data)
+
+    # get state_dict using tags data
+    S = len(tags)
+    state_dict = make_dict(tags)
+
+    # get obs_dict using training data
+    word_bag = []
+    for i in range(train_size):
+        word_bag += train_data[i].words
+    word_bag = list(set(word_bag))
+    obs_dict = make_dict(word_bag)
+    num_obs_symbols = len(word_bag)
+
+    # initialize all parameter
+    pi = np.zeros(S)
+    A = np.zeros(shape=(S, S))  # (S, S)
+    B = np.zeros(shape=(S, num_obs_symbols))  # (S, num_obs_symbols)
+
+    model = HMM(pi, A, B, obs_dict, state_dict)
     ###################################################
     return model
 
@@ -101,6 +121,17 @@ def speech_tagging(test_data, model, tags):
     """
     tagging = []
     ###################################################
-    # Edit here
+    num_sentence = len(test_data)
+    for i in range(test_data):
+        sentence = test_data[i]
+
     ###################################################
     return tagging
+
+
+def make_dict(text_list):
+    size = len(text_list)
+    text_dict = dict()
+    for i in range(size):
+        text_dict[text_list[i]] = i
+    return text_dict
