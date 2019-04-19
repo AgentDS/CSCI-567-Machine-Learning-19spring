@@ -6,5 +6,7 @@ By Prof. Victor Adamchik.
 
 Programming Assignment for CSCI 567 Machine Learning 19spring.
 
-- PA1: KNN & Decision Tree with Pruning
-- PA2: Linear Regression & Logistic Regression
+- PA1: KNN & Decision Tree with Pruning — (100/100)
+- PA2: Linear Regression & Logistic Regression — (100/100)
+- PA3: Neural Network — (100/100)
+- PA4: Kmeans & HMM — (100/100)
