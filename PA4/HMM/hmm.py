@@ -161,8 +161,6 @@ class HMM:
 
         # find path using Delta
         path = [None for t in range(L)]
-        # prev_idx = int(np.argmax(delta[:, L - 1]))
-        # path[L - 1] = idx_to_symbol[prev_idx]
         self.delta = delta
         self.Delta = Delta
         path_idx = np.ones(L, dtype=int) * -1

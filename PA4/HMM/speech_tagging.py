@@ -87,11 +87,6 @@ def model_training(train_data, tags):
     # tags are the states (X) that are not observed, words are the obs sequence (Z)
     train_size = len(train_data)
 
-    # get state_dict using tags data
-    # tag_bag = []
-    # for i in range(train_size):
-    #     tag_bag += train_data[i].tags
-    # tag_bag = list(set(tag_bag))
     state_dict = make_dict(tags)
     S = len(tags)
 
